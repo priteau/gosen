@@ -10,7 +10,9 @@ begin
     gem.email = "priteau@gmail.com"
     gem.homepage = "http://github.com/priteau/gosen"
     gem.authors = ["Pierre Riteau"]
-    gem.add_development_dependency "thoughtbot-shoulda", ">= 0"
+    gem.add_dependency "restfully", ">= 0.5.1"
+    gem.add_development_dependency "mocha", ">= 0.9.8"
+    gem.add_development_dependency "shoulda", ">= 2.10.2"
     gem.add_development_dependency "yard", ">= 0"
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
