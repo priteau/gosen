@@ -4,8 +4,12 @@ class TestDeployment < Test::Unit::TestCase
   context 'A deployment instance' do
     setup do
       @site = mock()
+      @site_name = "Rennes"
+      @site.stubs(:name).returns(@site_name)
       @environment = 'lenny-x64-base'
       @nodes = [ 'paramount-1.rennes.grid5000.fr', 'paramount-2.rennes.grid5000.fr' ]
+      @null_logger = Gosen::NullLogger.new
+      Gosen::NullLogger.stubs(:new).returns(@null_logger)
     end
 
     context 'without options' do
@@ -27,6 +31,10 @@ class TestDeployment < Test::Unit::TestCase
 
       should 'have a reader on ssh_public_key' do
         assert_equal(@ssh_public_key, @deployment.ssh_public_key)
+      end
+
+      should 'have a reader on logger defaulting to NullLogger' do
+        assert_equal(@null_logger, @deployment.logger)
       end
 
       should 'throw an error when accessing good_nodes' do
@@ -61,6 +69,12 @@ class TestDeployment < Test::Unit::TestCase
         @min_deployed_nodes = @nodes.length
         @deployment = Gosen::Deployment.new(@site, @environment, @nodes, { :min_deployed_nodes => @min_deployed_nodes })
         assert_equal(@min_deployed_nodes, @deployment.min_deployed_nodes)
+      end
+
+      should 'have a reader on logger' do
+        logger = mock()
+        @deployment = Gosen::Deployment.new(@site, @environment, @nodes, { :logger => logger })
+        assert_equal(logger, @deployment.logger)
       end
 
       should 'throw an error if not enough nodes are available from the start' do
@@ -99,6 +113,7 @@ class TestDeployment < Test::Unit::TestCase
         Kernel.stubs(:sleep).with(Gosen::DeploymentRun::POLLING_TIME)
         @site_deployments = mock()
         @site.stubs(:deployments).returns(@site_deployments)
+        @logger = mock()
 
         @deployment_resource = mock()
         @deployment_resource.stubs(:reload)
@@ -112,8 +127,12 @@ class TestDeployment < Test::Unit::TestCase
         }
         @deployment_resource.expects(:[]).with('result').returns(@deployment_result)
         @site_deployments.expects(:submit).with({ :environment => @environment, :nodes => @nodes }).returns(@deployment_resource)
+        @min_deployed_nodes = 2
+        @logger.expects(:info).with("Kadeploy run 1 with #{@nodes.length} nodes (0 already deployed, need #{@min_deployed_nodes} more)")
+          @logger.expects(:info).with("Nodes deployed: paramount-1.rennes.grid5000.fr paramount-2.rennes.grid5000.fr")
+        @logger.expects(:info).with("Had to run 1 kadeploy runs, deployed #{@deployment_result.length} nodes")
 
-        @deployment = Gosen::Deployment.new(@site, @environment, @nodes, { :min_deployed_nodes => 2 })
+        @deployment = Gosen::Deployment.new(@site, @environment, @nodes, { :logger => @logger, :min_deployed_nodes => @min_deployed_nodes })
         @deployment.join
         assert_equal(@nodes, @deployment.good_nodes)
         assert_equal([], @deployment.bad_nodes)
@@ -150,10 +169,17 @@ class TestDeployment < Test::Unit::TestCase
         @deployment_resource2.stubs(:[]).with('status').returns('processing', 'processing', 'terminated')
         @deployment_resource1.expects(:[]).with('result').returns(@deployment_result1)
         @deployment_resource2.expects(:[]).with('result').returns(@deployment_result2)
+        @min_deployed_nodes = 2
         @site_deployments.expects(:submit).with({ :environment => @environment, :nodes => @nodes }).returns(@deployment_resource1)
         @site_deployments.expects(:submit).with({ :environment => @environment, :nodes => [ 'paramount-2.rennes.grid5000.fr'] }).returns(@deployment_resource2)
+        @logger.expects(:info).with("Kadeploy run 1 with 2 nodes (0 already deployed, need 2 more)")
+        @logger.expects(:info).with("Nodes deployed: paramount-1.rennes.grid5000.fr")
+        @logger.expects(:info).with("Nodes which failed: paramount-2.rennes.grid5000.fr")
+        @logger.expects(:info).with("Kadeploy run 2 with 1 nodes (1 already deployed, need 1 more)")
+        @logger.expects(:info).with("Nodes deployed: paramount-2.rennes.grid5000.fr")
+        @logger.expects(:info).with("Had to run 2 kadeploy runs, deployed 2 nodes")
 
-        @deployment = Gosen::Deployment.new(@site, @environment, @nodes, { :min_deployed_nodes => 2, :max_deploy_runs => 2 })
+        @deployment = Gosen::Deployment.new(@site, @environment, @nodes, { :logger => @logger, :min_deployed_nodes => @min_deployed_nodes, :max_deploy_runs => 2 })
         @deployment.join
         assert_equal(@nodes, @deployment.good_nodes)
         assert_equal([], @deployment.bad_nodes)

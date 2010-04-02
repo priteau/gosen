@@ -1,6 +1,12 @@
 module Gosen
+  class NullLogger
+    def method_missing(method, *args)
+      nil
+    end
+  end
+
   class Deployment
-    attr_reader :environment, :max_deploy_runs, :min_deployed_nodes, :nodes, :site, :ssh_public_key
+    attr_reader :environment, :logger, :max_deploy_runs, :min_deployed_nodes, :nodes, :site, :ssh_public_key
 
     # Launch a new deployment
     # @param [Restfully::Resource] site the deployment site, as a restfully resource
@@ -15,6 +21,7 @@ module Gosen
       @bad_nodes = Array.new(nodes)
       @all_runs_done = false
       @api_options = {}
+      @logger = options.delete(:logger) || NullLogger.new
 
       @min_deployed_nodes = options[:min_deployed_nodes] || 1
       raise Gosen::Error if @min_deployed_nodes > @nodes.length || @min_deployed_nodes < 0
@@ -40,12 +47,16 @@ module Gosen
     def join
       @max_deploy_runs.times do |i|
         @deployment_resource = Gosen::DeploymentRun.new(@site, @environment, @bad_nodes)
+        @logger.info("Kadeploy run #{i + 1} with #{@bad_nodes.length} nodes (#{@good_nodes.length} already deployed, need #{@min_deployed_nodes - @good_nodes.length} more)")
         @deployment_resource.wait_for_completion
         @deployment_resource.update_nodes
         @bad_nodes = @deployment_resource.bad_nodes
         @good_nodes |= @deployment_resource.good_nodes
+        @logger.info("Nodes deployed: #{@deployment_resource.good_nodes.join(' ')}") unless @deployment_resource.good_nodes.empty?
+        @logger.info("Nodes which failed: #{@deployment_resource.bad_nodes.join(' ')}") unless @deployment_resource.bad_nodes.empty?
         if no_more_required?
           @all_runs_done = true
+          @logger.info("Had to run #{i + 1} kadeploy runs, deployed #{@good_nodes.length} nodes")
           return
         end
       end
