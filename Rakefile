@@ -6,7 +6,7 @@ begin
   Jeweler::Tasks.new do |gem|
     gem.name = "gosen"
     gem.summary = %Q{A Ruby library for the Grid'5000 RESTful API}
-    gem.description = %Q{TODO: longer description of your gem}
+    gem.description = %Q{Gosen is a Ruby library providing high-level operations using the Grid'5000 RESTful API, such as Kadeploy deployments}
     gem.email = "priteau@gmail.com"
     gem.homepage = "http://github.com/priteau/gosen"
     gem.authors = ["Pierre Riteau"]
