@@ -1,5 +1,3 @@
-require 'thread'
-
 module Gosen
   class Deployment
     attr_reader :environment, :max_deploy_runs, :min_deployed_nodes, :nodes, :site, :ssh_public_key
