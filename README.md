@@ -24,7 +24,7 @@ If both nodes are not successfully deployed, Gosen retries again (in this case, 
 
     logger = Logger.new(STDOUT)
 
-    Restfully::Session.new(:configuration_file => '~/.grid5000') do |grid, session|
+    Restfully::Session.new(:base_uri => 'https://api.grid5000.fr/2.0/grid5000') do |grid, session|
       site = grid.sites[:rennes]
       nodes = [ 'paramount-1.rennes.grid5000.fr', 'paramount-2.rennes.grid5000.fr' ]
       deployment = Gosen::Deployment.new(site, 'lenny-x64-big', nodes,
