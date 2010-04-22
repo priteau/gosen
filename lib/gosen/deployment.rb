@@ -30,8 +30,10 @@ module Gosen
       raise Gosen::Error if @max_deploy_runs < 1
 
       if options[:ssh_public_key]
-        @api_options[:key] = @ssh_public_key = options[:ssh_public_key]
+        @ssh_public_key = options[:ssh_public_key]
       end
+
+      @api_options = options
     end
 
     def good_nodes
@@ -46,7 +48,7 @@ module Gosen
 
     def join
       @max_deploy_runs.times do |i|
-        @deployment_resource = Gosen::DeploymentRun.new(@site, @environment, @bad_nodes)
+        @deployment_resource = Gosen::DeploymentRun.new(@site, @environment, @bad_nodes, @api_options)
         @logger.info("Kadeploy run #{i + 1} with #{@bad_nodes.length} nodes (#{@good_nodes.length} already deployed, need #{@min_deployed_nodes - @good_nodes.length} more)")
         @deployment_resource.wait_for_completion
         @deployment_resource.update_nodes
