@@ -81,6 +81,11 @@ class TestDeploymentRun < Test::Unit::TestCase
       @deployment = Gosen::DeploymentRun.new(@site, @environment, @nodes, { :ssh_public_key => @ssh_public_key })
     end
 
+    should 'have a reader on the deployment resource' do
+       @deployment.join
+       assert_equal(@resource, @deployment.deployment_resource)
+    end
+
     should 'wait for deployment completion and give access to the results' do
       assert_nothing_raised(Exception) {
         @deployment.join

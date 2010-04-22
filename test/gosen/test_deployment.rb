@@ -126,6 +126,23 @@ class TestDeployment < Test::Unit::TestCase
         @deployment_resource.stubs(:[]).with('status').returns('processing', 'processing', 'terminated')
       end
 
+      should 'have a reader on the deployment resource' do
+        @deployment_result = {
+          'paramount-1.rennes.grid5000.fr' => { 'state' => 'OK' },
+          'paramount-2.rennes.grid5000.fr' => { 'state' => 'OK' }
+        }
+        @deployment_resource.expects(:[]).with('result').returns(@deployment_result)
+        @site_deployments.expects(:submit).with({ :environment => @environment, :nodes => @nodes }).returns(@deployment_resource)
+        @min_deployed_nodes = 2
+        @logger.expects(:info).with("Kadeploy run 1 with #{@nodes.length} nodes (0 already deployed, need #{@min_deployed_nodes} more)")
+        @logger.expects(:info).with("Nodes deployed: paramount-1.rennes.grid5000.fr paramount-2.rennes.grid5000.fr")
+        @logger.expects(:info).with("Had to run 1 kadeploy runs, deployed #{@deployment_result.length} nodes")
+
+        @deployment = Gosen::Deployment.new(@site, @environment, @nodes, { :logger => @logger, :min_deployed_nodes => @min_deployed_nodes })
+        @deployment.join
+        assert_equal(@deployment_resource, @deployment.deployment_resource)
+      end
+
       should 'submit a deployment run and wait for the result' do
         @deployment_result = {
           'paramount-1.rennes.grid5000.fr' => { 'state' => 'OK' },

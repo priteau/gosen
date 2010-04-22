@@ -1,0 +1,123 @@
+#!/usr/bin/env ruby
+
+require 'gosen'
+require 'logger'
+require 'optparse'
+require 'ostruct'
+
+trap('INT') {
+  deployment_resource = @deployment.deployment_resource rescue nil
+  if deployment_resource && deployment_resource['status'] == 'processing'
+    deployment_resource.delete
+    puts "Cancelled deployment #{deployment_resource['uid']}"
+  end
+  exit
+}
+
+config = OpenStruct.new
+deployment_options = {}
+config.nodes = []
+
+logger = Logger.new(STDOUT)
+logger.level = Logger::INFO
+deployment_options[:logger] = logger
+
+options = OptionParser.new do |opts|
+  opts.banner = 'Usage: trebuchet [options]'
+  opts.separator ''
+  opts.separator 'Specific options:'
+  opts.on('-b', '--block-device BLOCKDEVICE', 'Specify the block device to use') do |p|
+    deployment_options[:block_device] = p
+  end
+  opts.on('-c', '--copy-ssh-key', 'Copy SSH keys to nodes') do
+    config.copy_ssh_key = true
+  end
+  opts.on('--disable_bootloader_install', 'Disable the automatic installation of a bootloader for a Linux based environnment') do
+    deployment_options[:disable_bootloader_install] = true
+  end
+  opts.on('--disable_disk_partitioning', 'Disable the disk partitioning') do
+    deployment_options[:disable_disk_partitioning] = true
+  end
+  opts.on('-e', '--deploy-env ENV', 'Environment to deploy') do |env|
+    config.deploy_env = env
+  end
+  opts.on('--env-version NUMBER', 'Number of version of the environment to deploy') do |v|
+    deployment_options[:version] = v
+  end
+  opts.on('-f', '--file MACHINELIST', 'Files containing the list of nodes') do |f|
+    config.nodefile = f
+  end
+  opts.on('-i', '--ssh-key-file FILE', "File containing keys to copy (defaults to #{config.ssh_keyfile})") do |f|
+    config.ssh_keyfile = f
+  end
+  opts.on('--ignore-nodes-deploying', 'Allow to deploy even on the nodes tagged as "currently deploying" (use this only if you know what you do)') do
+    deployment_options[:ignore_nodes_deploying] = true
+  end
+  opts.on('-l', '--deploy-user USER', 'User owning the deployment environment') do |u|
+    config.deploy_user = u
+  end
+  opts.on('-m', '--machine MACHINE', 'Node to run on') do |n|
+    config.nodes << n
+  end
+  opts.on('--max-deploy-runs NB', 'Maximum number of deployment runs before we admit we cannot get enough nodes deployed') do |n|
+    deployment_options[:max_deploy_runs] = n.to_i
+  end
+  opts.on('--min-deployed-nodes NB', 'Minimum number of nodes that must be correctly deployed before continuing') do |n|
+    deployment_options[:min_deployed_nodes] = n.to_i
+  end
+  opts.on('-p', '--partition-number NUMBER', 'Specify the partition number to use') do |p|
+    deployment_options[:partition_number] = p
+  end
+  opts.on('-r', '--reformat-tmp FSTYPE', 'Reformat the /tmp partition') do |fs|
+    fstypes = [ "ext2", "ext3", "ext4" ]
+    abort "FSTYPE must be one of #{fstypes.join(', ')}" unless fstypes.include?(fs)
+    deployment_options[:reformat_tmp] = fs
+  end
+end
+
+begin
+  options.parse!(ARGV)
+rescue OptionParser::ParseError => e
+  $stderr.puts e
+  exit 1
+end
+
+if config.nodes.empty?
+  config.nodefile ||= ENV['OAR_NODEFILE']
+  config.nodes = File.open(File.expand_path(config.nodefile)).readlines.collect { |l| l.chomp }.sort.uniq
+end
+
+if config.nodes.empty?
+  abort "No nodes specified, and no OAR_NODEFILE variable, exiting.\nRun trebuchet --help if you need help."
+end
+
+if config.deploy_env.nil?
+  abort "Error: an environment to deploy is required.\nRun trebuchet --help if you need help."
+end
+
+if config.deploy_user
+  config.deploy_env += "@#{config.deploy_user}"
+end
+
+if config.ssh_keyfile
+  abort 'Error: the --ssh-keyfile option only makes sense with --copy-ssh-key.\nRun trebuchet --help if you need help.' if config.copy_ssh_key.nil?
+end
+
+if config.copy_ssh_key
+  config.ssh_keyfile ||= '~/.ssh/authorized_keys'
+  deployment_options[:ssh_public_key] = File.open(File.expand_path(config.ssh_keyfile)).read
+end
+
+if ENV['RESTFULLY_CONFIG'].nil?
+  abort "No RESTFULLY_CONFIG environment variable, exiting.\nRun trebuchet --help if you need help."
+end
+
+Restfully::Session.new({ :configuration_file => ENV['RESTFULLY_CONFIG'] }) do |grid, session|
+  indexed_nodes = Gosen::index_nodes_by_site(config.nodes)
+  if indexed_nodes.keys.length > 1
+    raise StandardError.new("The node list needs to be specific to a single site\nRun trebuchet --help if you need help.")
+  end
+  site = grid.sites[indexed_nodes.keys.first.to_sym].load
+  @deployment = Gosen::Deployment.new(site, config.deploy_env, config.nodes, deployment_options)
+  @deployment.join
+end

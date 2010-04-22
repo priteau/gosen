@@ -80,6 +80,10 @@ module Gosen
       raise Gosen::Error.new("Not enough nodes deployed after #{@max_deploy_runs} deployment(s): needed #{@min_deployed_nodes} nodes, got only #{@good_nodes.length}")
     end
 
+    def deployment_resource
+      @deployment_run.deployment_resource rescue nil
+    end
+
     def no_more_required?
       @good_nodes.length >= @min_deployed_nodes
     end
