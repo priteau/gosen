@@ -1,7 +1,7 @@
 module Gosen
   class DeploymentRun
     # Time between two checks of the deployment run status
-    POLLING_TIME = 30
+    POLLING_TIME = 10
 
     attr_reader :environment, :nodes, :site, :ssh_public_key
 
