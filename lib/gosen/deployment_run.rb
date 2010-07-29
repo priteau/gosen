@@ -25,7 +25,7 @@ module Gosen
     end
 
     def terminated?
-      @deployment_resource['status'] == 'terminated'
+      @deployment_resource['status'] != 'processing'
     end
 
     def good_nodes
@@ -57,6 +57,7 @@ module Gosen
         Kernel.sleep(Gosen::DeploymentRun::POLLING_TIME)
         @deployment_resource.reload
       end
+      raise Gosen::Error if @deployment_resource['status'] == 'error'
     end
 
     def update_nodes

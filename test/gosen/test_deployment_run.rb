@@ -89,4 +89,27 @@ class TestDeploymentRun < Test::Unit::TestCase
       assert_equal([], @deployment.bad_nodes)
     end
   end
+
+  context 'A failed deployment run instance' do
+    setup do
+      @ssh_public_key = 'ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAvwM1XBJCIMtAyQlweE7BVRtvgyKdwGTeYCI4AFlsTtti4y0Ipe5Hsygx3p7S0BHFiJsVZWDANMRwZ4tcjp8YnjnMkG2yp1jB1qgUf34t/MmEQL0KkoOk8tIIb28o7nTFYKO15mXJm9yBVS1JY8ozEfnA7s5hkrdnvM6h9Jv6VScp8C1XTKmpEy3sWOeUlmCkYftYSr1fLM/7qk9S2TnljA/CGiK9dq2mhJMjnDtulVrdpc1hbh+0oCzL6m2BfXX3v4q1ORml8o04oFeEYDN5qzZneL+FzK+YfJIidvsjZ9ziVTv+7Oy5ms4wvoKiUGNapP0v/meXXBU1KvFRof3VZQ== priteau@parallelogram.local'
+      @resource = mock()
+      @resource.stubs(:[]).with('status').returns('processing', 'processing', 'error')
+      @resource.expects(:reload).twice
+      Kernel.expects(:sleep).with(Gosen::DeploymentRun::POLLING_TIME).twice
+
+      @environment = 'lenny-x64-base'
+      @nodes = [ 'paramount-1.rennes.grid5000.fr' ]
+      @deployments = mock()
+      @deployments.expects(:submit).with({ :environment => @environment, :nodes => @nodes, :key => @ssh_public_key}).returns(@resource)
+      @site = stub(:deployments => @deployments)
+      @deployment = Gosen::DeploymentRun.new(@site, @environment, @nodes, { :ssh_public_key => @ssh_public_key })
+    end
+
+    should 'raise an exception' do
+      assert_raise(Gosen::Error) {
+        @deployment.join
+      }
+    end
+  end
 end
