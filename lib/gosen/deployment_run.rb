@@ -16,10 +16,10 @@ module Gosen
       @nodes = nodes
       @good_nodes = []
       @bad_nodes = Array.new(@nodes)
-      @api_options = {}
+      @api_options = options
 
-      if options[:ssh_public_key]
-        @api_options[:key] = @ssh_public_key = options[:ssh_public_key]
+      if @api_options[:ssh_public_key]
+        @api_options[:key] = @ssh_public_key = @api_options.delete(:ssh_public_key)
       end
       submit_deployment
     end

@@ -23,10 +23,10 @@ module Gosen
       @api_options = {}
       @logger = options.delete(:logger) || NullLogger.new
 
-      @min_deployed_nodes = options[:min_deployed_nodes] || 1
+      @min_deployed_nodes = options.delete(:min_deployed_nodes) || 1
       raise Gosen::Error if @min_deployed_nodes > @nodes.length || @min_deployed_nodes < 0
 
-      @max_deploy_runs = options[:max_deploy_runs] || 1
+      @max_deploy_runs = options.delete(:max_deploy_runs) || 1
       raise Gosen::Error if @max_deploy_runs < 1
 
       if options[:ssh_public_key]
