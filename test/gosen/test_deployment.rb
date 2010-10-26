@@ -6,6 +6,7 @@ class TestDeployment < Test::Unit::TestCase
       @site = mock()
       @session = mock()
       @default_headers = mock()
+      @default_headers.stubs(:[]).with('User-Agent').returns("Restfully/#{Restfully::VERSION}")
       @default_headers.stubs(:[]=).with('User-Agent', "Gosen/#{Gosen::VERSION} Restfully/#{Restfully::VERSION}")
       @session.stubs(:default_headers).returns(@default_headers)
       @site.stubs(:session).returns(@session)

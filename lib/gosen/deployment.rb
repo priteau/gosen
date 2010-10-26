@@ -23,7 +23,8 @@ module Gosen
       @api_options = {}
       @logger = options.delete(:logger) || NullLogger.new
 
-      @site.session.default_headers['User-Agent'] = "Gosen/#{Gosen::VERSION} Restfully/#{Restfully::VERSION}"
+      user_agent = @site.session.default_headers['User-Agent']
+      @site.session.default_headers['User-Agent'] = "Gosen/#{Gosen::VERSION} #{user_agent}" unless user_agent =~ /^Gosen\/#{Gosen::VERSION}/
 
       @min_deployed_nodes = options.delete(:min_deployed_nodes) || 1
       raise Gosen::Error.new("Invalid minimal number of deployed nodes, should be between 0 and #{@nodes.length}") if @min_deployed_nodes > @nodes.length || @min_deployed_nodes < 0
