@@ -4,6 +4,11 @@ class TestDeployment < Test::Unit::TestCase
   context 'A deployment instance' do
     setup do
       @site = mock()
+      @session = mock()
+      @default_headers = mock()
+      @default_headers.stubs(:[]=).with('User-Agent', "Gosen/#{Gosen::VERSION} Restfully/#{Restfully::VERSION}")
+      @session.stubs(:default_headers).returns(@default_headers)
+      @site.stubs(:session).returns(@session)
       @site_name = "Rennes"
       @site.stubs(:name).returns(@site_name)
       @environment = 'lenny-x64-base'
