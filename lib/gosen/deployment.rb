@@ -29,6 +29,8 @@ module Gosen
       @max_deploy_runs = options.delete(:max_deploy_runs) || 1
       raise Gosen::Error.new("Invalid maximal number of deployments, should be greater than or equal to 1") if @max_deploy_runs < 1
 
+      @continue_if_error = options.delete(:continue_if_error) || false
+
       if options[:ssh_public_key]
         @ssh_public_key = options[:ssh_public_key]
       end
@@ -48,14 +50,24 @@ module Gosen
 
     def join
       @max_deploy_runs.times do |i|
-        @deployment_resource = Gosen::DeploymentRun.new(@site, @environment, @bad_nodes, @api_options)
+        @deployment_run = Gosen::DeploymentRun.new(@site, @environment, @bad_nodes, @api_options)
         @logger.info("Kadeploy run #{i + 1} with #{@bad_nodes.length} nodes (#{@good_nodes.length} already deployed, need #{@min_deployed_nodes - @good_nodes.length} more)")
-        @deployment_resource.wait_for_completion
-        @deployment_resource.update_nodes
-        @bad_nodes = @deployment_resource.bad_nodes
-        @good_nodes |= @deployment_resource.good_nodes
-        @logger.info("Nodes deployed: #{@deployment_resource.good_nodes.join(' ')}") unless @deployment_resource.good_nodes.empty?
-        @logger.info("Nodes which failed: #{@deployment_resource.bad_nodes.join(' ')}") unless @deployment_resource.bad_nodes.empty?
+        begin
+          @deployment_run.wait_for_completion
+        rescue Gosen::Error => e
+          if e.message =~ /^Deployment error/ && @continue_if_error
+            @logger.warn("Deployment error: #{@deployment_run.deployment_resource['output']}")
+            @logger.warn("Continuing because continue_if_error is set")
+            next
+          else
+            raise e
+          end
+        end
+        @deployment_run.update_nodes
+        @bad_nodes = @deployment_run.bad_nodes
+        @good_nodes |= @deployment_run.good_nodes
+        @logger.info("Nodes deployed: #{@deployment_run.good_nodes.join(' ')}") unless @deployment_run.good_nodes.empty?
+        @logger.info("Nodes which failed: #{@deployment_run.bad_nodes.join(' ')}") unless @deployment_run.bad_nodes.empty?
         if no_more_required?
           @all_runs_done = true
           @logger.info("Had to run #{i + 1} kadeploy runs, deployed #{@good_nodes.length} nodes")

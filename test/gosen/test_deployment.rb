@@ -201,6 +201,37 @@ class TestDeployment < Test::Unit::TestCase
         assert_equal(@nodes, @deployment.good_nodes)
         assert_equal([], @deployment.bad_nodes)
       end
+
+      should 'continue deploying when an error happens and :continue_if_error was set' do
+        @ssh_public_key = 'ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAvwM1XBJCIMtAyQlweE7BVRtvgyKdwGTeYCI4AFlsTtti4y0Ipe5Hsygx3p7S0BHFiJsVZWDANMRwZ4tcjp8YnjnMkG2yp1jB1qgUf34t/MmEQL0KkoOk8tIIb28o7nTFYKO15mXJm9yBVS1JY8ozEfnA7s5hkrdnvM6h9Jv6VScp8C1XTKmpEy3sWOeUlmCkYftYSr1fLM/7qk9S2TnljA/CGiK9dq2mhJMjnDtulVrdpc1hbh+0oCzL6m2BfXX3v4q1ORml8o04oFeEYDN5qzZneL+FzK+YfJIidvsjZ9ziVTv+7Oy5ms4wvoKiUGNapP0v/meXXBU1KvFRof3VZQ== priteau@parallelogram.local'
+        @deployment_resource1 = mock()
+        @deployment_resource2 = mock()
+        @deployment_resource1.stubs(:reload)
+        @deployment_resource2.stubs(:reload)
+
+        @output = 'Your key cannot be fetched.'
+        @deployment_result2 = {
+          'paramount-1.rennes.grid5000.fr' => { 'state' => 'OK' },
+          'paramount-2.rennes.grid5000.fr' => { 'state' => 'OK' }
+        }
+        @deployment_resource1.stubs(:[]).with('status').returns('processing', 'processing', 'error')
+        @deployment_resource1.stubs(:[]).with('output').returns(@output)
+        @deployment_resource2.stubs(:[]).with('status').returns('processing', 'processing', 'terminated')
+        @deployment_resource2.expects(:[]).with('result').returns(@deployment_result2)
+        @min_deployed_nodes = 2
+        @site_deployments.expects(:submit).twice.with({ :environment => @environment, :nodes => @nodes, :key => @ssh_public_key }).returns(@deployment_resource1, @deployment_resource2)
+        @logger.expects(:info).with("Kadeploy run 1 with 2 nodes (0 already deployed, need 2 more)")
+        @logger.expects(:warn).with("Deployment error: #{@output}")
+        @logger.expects(:warn).with("Continuing because continue_if_error is set")
+        @logger.expects(:info).with("Kadeploy run 2 with 2 nodes (0 already deployed, need 2 more)")
+        @logger.expects(:info).with("Nodes deployed: paramount-1.rennes.grid5000.fr paramount-2.rennes.grid5000.fr")
+        @logger.expects(:info).with("Had to run 2 kadeploy runs, deployed 2 nodes")
+
+        @deployment = Gosen::Deployment.new(@site, @environment, @nodes, { :logger => @logger, :min_deployed_nodes => @min_deployed_nodes, :max_deploy_runs => 2, :ssh_public_key => @ssh_public_key, :continue_if_error => true })
+        @deployment.join
+        assert_equal(@nodes, @deployment.good_nodes)
+        assert_equal([], @deployment.bad_nodes)
+      end
     end
   end
 end

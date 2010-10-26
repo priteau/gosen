@@ -3,7 +3,7 @@ module Gosen
     # Time between two checks of the deployment run status
     POLLING_TIME = 10
 
-    attr_reader :environment, :nodes, :site, :ssh_public_key
+    attr_reader :deployment_resource, :environment, :nodes, :site, :ssh_public_key
 
     # Launch a new deployment run
     # @param [Restfully:Resource] site the deployment site, as a restfully resource
