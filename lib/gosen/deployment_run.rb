@@ -57,7 +57,7 @@ module Gosen
         Kernel.sleep(Gosen::DeploymentRun::POLLING_TIME)
         @deployment_resource.reload
       end
-      raise Gosen::Error if @deployment_resource['status'] == 'error'
+      raise Gosen::Error.new("Deployment error: #{@deployment_resource['output']}") if @deployment_resource['status'] == 'error'
     end
 
     def update_nodes

@@ -148,7 +148,12 @@ class TestDeployment < Test::Unit::TestCase
 
         @deployment = Gosen::Deployment.new(@site, @environment, @nodes, { :min_deployed_nodes => 2 })
         assert_raise(Gosen::Error) {
-          @deployment.join
+          begin
+            @deployment.join
+          rescue Gosen::Error => e
+            assert_equal("Not enough nodes deployed after 1 deployment(s): needed 2 nodes, got only 1", e.message)
+            raise e
+          end
         }
       end
 

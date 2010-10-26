@@ -24,10 +24,10 @@ module Gosen
       @logger = options.delete(:logger) || NullLogger.new
 
       @min_deployed_nodes = options.delete(:min_deployed_nodes) || 1
-      raise Gosen::Error if @min_deployed_nodes > @nodes.length || @min_deployed_nodes < 0
+      raise Gosen::Error.new("Invalid minimal number of deployed nodes, should be between 0 and #{@nodes.length}") if @min_deployed_nodes > @nodes.length || @min_deployed_nodes < 0
 
       @max_deploy_runs = options.delete(:max_deploy_runs) || 1
-      raise Gosen::Error if @max_deploy_runs < 1
+      raise Gosen::Error.new("Invalid maximal number of deployments, should be greater than or equal to 1") if @max_deploy_runs < 1
 
       if options[:ssh_public_key]
         @ssh_public_key = options[:ssh_public_key]
@@ -62,7 +62,7 @@ module Gosen
           return
         end
       end
-      raise Gosen::Error.new('Not enough nodes')
+      raise Gosen::Error.new("Not enough nodes deployed after #{@max_deploy_runs} deployment(s): needed #{@min_deployed_nodes} nodes, got only #{@good_nodes.length}")
     end
 
     def no_more_required?
