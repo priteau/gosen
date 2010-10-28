@@ -1,4 +1,4 @@
-# Gosen
+# Gosen (ごせん)
 
 Gosen is a Ruby library for the [Grid'5000 RESTful API](https://api.grid5000.fr/).
 It relies on the [Restfully library](http://github.com/crohr/restfully) for interacting with the API.
