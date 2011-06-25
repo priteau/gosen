@@ -4,7 +4,7 @@ require 'gosen/deployment'
 require 'gosen/error'
 
 module Gosen
-  VERSION = "0.2.0"
+  VERSION = "0.2.1"
 
   # Extracts the site part of a Grid'5000 node hostname, and returns a hash indexing the nodes by their site
   # Example:
